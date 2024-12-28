@@ -12,6 +12,8 @@ struct ContentView: View {
     @State private var usedWords = [String]()
     @State private var rootWord = "Gaming"
     @State private var newWord = ""
+    @State private var round = 1
+    @State private var score: Int = 0
     // error control var
     @State private var errorTitle = ""
     @State private var errorMessage = ""
@@ -25,17 +27,27 @@ struct ContentView: View {
         // check originality
         guard isOriginal(word: answer) else {
             wordError(title: "Word used already", message: "Think of a new word")
+            score -= 10
             return
         }
         // check word validity
         guard isPossible(word: answer) else {
             wordError(title: "Word not possible", message: "You can't spell that word from '\(rootWord)'!")
+            score -= 10
             return
         }
         // check real word
         guard isReal(word: answer) else {
             wordError(title: "Word not recognized", message: "You can't use imaginary words")
+            score -= 10
             return
+        }
+        // check in round 1 is More Than 3 letters and Not RootWord
+        if round == 1 {
+            guard isMoreThan3andNotRootWord(word: answer) else {
+                wordError(title: "Invalid first move", message: "Enter word with more than 3 letters and not root word")
+                return
+            }
         }
         
         // insert at position 0
@@ -45,6 +57,8 @@ struct ContentView: View {
         print(usedWords)
         // reset newWord
         newWord = ""
+        round += 1
+        score = score + answer.count * 10
     }
     
     func startGame() {
@@ -90,18 +104,36 @@ struct ContentView: View {
         return misspelledRange.location == NSNotFound
     }
     
+    func isMoreThan3andNotRootWord(word: String) -> Bool {
+        if word.count <= 3 {
+            return false
+        }
+        if word == rootWord {
+            return false
+        }
+        return true
+    }
+    
     func wordError(title: String, message: String) {
         errorTitle = title
         errorMessage = message
         showingError = true
     }
     
+    func resetGame() {
+        newWord = ""
+        round = 1
+        score = 0
+        usedWords = [String]()
+    }
+    
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    Text("Input word")
-                        .font(.headline)
+                Section("correct +10 each letter, wrong -10") {
+                    Text("Score: \(score)")
+                }
+                Section("Think of a new word from '\(rootWord)'!") {
                     TextField("Enter your word", text: $newWord)
                         .textInputAutocapitalization(.never)
                         .onSubmit(addNewWord)
@@ -112,7 +144,7 @@ struct ContentView: View {
                             Text(errorMessage)
                         }
                 }
-                Section {
+                Section("Your words") {
                     if usedWords.count != 0 {
                         Text("New words")
                             .font(.headline)
@@ -134,6 +166,12 @@ struct ContentView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Insert") {
                         addNewWord()
+                    }
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Reset", role: .cancel) {
+                        resetGame()
+                        startGame()
                     }
                 }
             }
